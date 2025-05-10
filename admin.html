@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Fearless Trading</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        body
+        {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .admin-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .export-btn {
+            background: linear-gradient(90deg, rgba(132, 54, 36, 1) 0%, rgba(234, 96, 63, 1) 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .registrations-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #262626;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .registrations-table th,
+        .registrations-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+            color: #fff;
+        }
+        .registrations-table th {
+            background: #1c1c1c;
+            color: #ea603f;
+        }
+        .no-data {
+            text-align: center;
+            padding: 2rem;
+            color: #a7a7a7;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Course Registrations</h1>
+            <div class="admin-actions">
+                <button onclick="exportToExcel()" class="export-btn">Export to Excel</button>
+                <button onclick="showClearDataModal()" class="clear-btn">Clear All Data</button>
+                <button onclick="sendEmailToAll()" class="email-btn">Send Email to All</button>
+            </div>
+        </div>
+        
+        <table class="registrations-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Experience</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="registrationsBody">
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        // Function to load registrations from localStorage
+        function loadRegistrations() {
+            const registrations = JSON.parse(localStorage.getItem('courseRegistrations')) || [];
+            const tbody = document.getElementById('registrationsBody');
+            
+            if (registrations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No registrations found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = registrations.map(reg => `
+                <tr>
+                    <td>${formatDate(reg.enrollment_date)}</td>
+                    <td>${reg.full_name}</td>
+                    <td>${reg.email}</td>
+                    <td>${reg.mobile}</td>
+                    <td>${reg.experience_level}</td>
+                    <td>₹${reg.total_amount}</td>
+                    <td>${reg.status || 'Pending'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Function to export to Excel
+        function exportToExcel() {
+            const registrations = JSON.parse(localStorage.getItem('courseRegistrations')) || [];
+            
+            if (registrations.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            // Format data for Excel
+            const excelData = registrations.map(reg => ({
+                'Registration Date': formatDate(reg.enrollment_date),
+                'Full Name': reg.full_name,
+                'Email': reg.email,
+                'Mobile': reg.mobile,
+                'Experience Level': reg.experience_level,
+                'Course Fee': reg.amount,
+                'GST': reg.gst,
+                'Total Amount': reg.total_amount,
+                'Status': reg.status || 'Pending'
+            }));
+
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Registrations");
+
+            // Save file
+            XLSX.writeFile(wb, `Course_Registrations_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        // Load registrations when page loads
+        document.addEventListener('DOMContentLoaded', loadRegistrations);
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.querySelector('.registrations-table tbody');
+            const noDataMessage = document.querySelector('.no-data');
+            
+            // Get registrations from localStorage
+            const registrations = JSON.parse(localStorage.getItem('courseRegistrations')) || [];
+            
+            if (registrations.length > 0) {
+                noDataMessage.style.display = 'none';
+                registrations.forEach(registration => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${registration.name}</td>
+                        <td>${registration.email}</td>
+                        <td>${registration.phone}</td>
+                        <td>${registration.experience}</td>
+                        <td>${new Date(registration.timestamp).toLocaleString()}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                noDataMessage.style.display = 'block';
+            }
+
+            // Export to Excel functionality
+            document.querySelector('.export-btn').addEventListener('click', () => {
+                if (registrations.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+
+                const ws = XLSX.utils.json_to_sheet(registrations);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Registrations");
+                XLSX.writeFile(wb, "course_registrations.xlsx");
+            });
+        });
+    </script>
+
+    <!-- Add this modal for clear data confirmation -->
+    <div id="clearDataModal" class="modal">
+        <div class="modal-content">
+            <h2>Clear All Data</h2>
+            <p>Enter password to clear all registration data:</p>
+            <input type="password" id="clearDataPassword" class="password-input">
+            <div class="modal-actions">
+                <button onclick="clearData()" class="clear-btn">Clear Data</button>
+                <button onclick="closeClearDataModal()" class="cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .clear-btn {
+            background: linear-gradient(90deg, #843624 0%, #ea603f 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .cancel-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #262626;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .password-input {
+            width: 100%;
+            padding: 12px;
+            margin: 1rem 0;
+            background: #1c1c1c;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+
+    <script>
+        // Add these new functions
+        function showClearDataModal() {
+            document.getElementById('clearDataModal').style.display = 'flex';
+            document.getElementById('clearDataPassword').value = '';
+        }
+    
+        function closeClearDataModal() {
+            document.getElementById('clearDataModal').style.display = 'none';
+        }
+    
+        function clearData() {
+            const password = document.getElementById('clearDataPassword').value;
+            const correctPassword = 'Fearlesstrading';
+    
+            if (password === correctPassword) {
+                localStorage.removeItem('courseRegistrations');
+                loadRegistrations(); // Refresh the table
+                closeClearDataModal();
+                alert('All registration data has been cleared successfully.');
+            } else {
+                alert('Incorrect password. Please try again.');
+            }
+        }
+    
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('clearDataModal');
+            if (event.target === modal) {
+                closeClearDataModal();
+            }
+        }
+    </script>
+</body>
+</html>
+
+<style>
+    .email-btn {
+        background: linear-gradient(90deg, #843624 0%, #ea603f 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    </style>
+
+    <script>
+    // Add this new function for sending emails
+    async function sendEmailToAll() {
+        const registrations = JSON.parse(localStorage.getItem('courseRegistrations')) || [];
+        
+        if (registrations.length === 0) {
+            alert('No registered users found');
+            return;
+        }
+    
+        try {
+            for (const registration of registrations) {
+                const emailData = {
+                    to: registration.email,
+                    subject: 'Welcome to Fearless Trading',
+                    text: 'Hello'
+                };
+    
+                // Here you would typically make an API call to your email service
+                // For demonstration, we'll just log it
+                console.log('Sending email to:', emailData.to);
+            }
+            
+            alert('Email sending initiated to all registered users');
+        } catch (error) {
+            console.error('Error sending emails:', error);
+            alert('Error sending emails. Please try again.');
+        }
+    }
+    </script>
